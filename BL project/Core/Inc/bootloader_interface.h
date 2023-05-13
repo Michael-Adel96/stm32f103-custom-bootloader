@@ -38,7 +38,7 @@
 #define CBL_SEND_NACK                0xAB
 #define CBL_SEND_ACK                 0xCD
 
-
+#define CRC_TYPE_SIZE_BYTE			0x04
 /* Bootloader version */
 /*==============================*/
 #define CBL_VENDOR_ID                100

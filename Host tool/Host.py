@@ -145,12 +145,10 @@ def Process_CBL_GET_RDP_STATUS_CMD(Data_Len):
     _value_ = bytearray(Serial_Data)
     if(_value_[0] == 0xEE):
         print("\n   Error While Reading FLASH Protection level !!")
-    elif(_value_[0] == 0xAA):
+    elif(_value_[0] == 0xA5):
         print("\n   FLASH Protection : LEVEL 0")
-    elif(_value_[0] == 0x55):
+    elif(_value_[0] == 0x00):
         print("\n   FLASH Protection : LEVEL 1")
-    elif(_value_[0] == 0xCC):
-        print("\n   FLASH Protection : LEVEL 2")
 
 def Process_CBL_GO_TO_ADDR_CMD(Data_Len):
     Serial_Data = Read_Serial_Port(Data_Len)
@@ -453,7 +451,7 @@ SerialPortName = input("Enter the Port Name of your device(Ex: COM3):")
 Serial_Port_Configuration(SerialPortName)
         
 while True:
-    print("\nSTM32F407 Custome BootLoader")
+    print("\nSTM32F103 Custome BootLoader")
     print("==============================")
     print("Which command you need to send to the bootLoader :");
     print("   CBL_GET_VER_CMD              --> 1")

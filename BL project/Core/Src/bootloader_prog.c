@@ -17,12 +17,32 @@
 
 /* ----------------- Static Functions Deceleration -----------------*/
 static void Bootloader_Get_Version(uint8_t *Host_Buffer);
+static void Bootloader_Get_Help(uint8_t *Host_Buffer);
+static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer);
+static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer);
+
+static uint8_t CBL_STM32F103_Get_RDP_Level(void);
 static CRC_Status Bootloader_CRC_Verify(uint8_t *pData, uint32_t Data_Len, uint32_t Host_CRC);
 static void Bootloader_Send_ACK(uint8_t Replay_Len);
 static void Bootloader_Send_NACK(void);
 static void Bootloader_Send_Data_To_Host(uint8_t *Host_Buffer, uint32_t Data_Len);
 /* ----------------- Global Variables Definitions -----------------*/
 static uint8_t BL_Host_Buffer[BL_HOST_BUFFER_RX_LENGTH];
+
+static uint8_t Bootloader_Supported_CMDs[12] = {
+    CBL_GET_VER_CMD,
+    CBL_GET_HELP_CMD,
+    CBL_GET_CID_CMD,
+    CBL_GET_RDP_STATUS_CMD,
+    CBL_GO_TO_ADDR_CMD,
+    CBL_FLASH_ERASE_CMD,
+    CBL_MEM_WRITE_CMD,
+    CBL_ED_W_PROTECT_CMD,
+    CBL_MEM_READ_CMD,
+    CBL_READ_SECTOR_STATUS_CMD,
+    CBL_OTP_READ_CMD,
+    CBL_CHANGE_ROP_Level_CMD
+};
 /* -----------------  Software Interfaces Definitions -----------------*/
 BL_Status BL_UART_Fetch_Host_Command(void)
 {
@@ -48,6 +68,19 @@ BL_Status BL_UART_Fetch_Host_Command(void)
 			switch(BL_Host_Buffer[1]){
 				case CBL_GET_VER_CMD:
 					Bootloader_Get_Version(BL_Host_Buffer);
+					status = BL_OK;
+					break;
+				case CBL_GET_HELP_CMD:
+					Bootloader_Get_Help(BL_Host_Buffer);
+					status = BL_OK;
+					break;
+				case CBL_GET_CID_CMD:
+					Bootloader_Get_Chip_Identification_Number(BL_Host_Buffer);
+					status = BL_OK;
+					break;
+				case CBL_GET_RDP_STATUS_CMD:
+					Bootloader_Read_Protection_Level(BL_Host_Buffer);
+					status = BL_OK;
 					break;
 				default:
 					BL_Print_Message("Invalid command code received from host !! \r\n");
@@ -93,6 +126,109 @@ static void Bootloader_Get_Version(uint8_t *Host_Buffer)
 
 
 }
+
+static void Bootloader_Get_Help(uint8_t *Host_Buffer)
+{
+	uint32_t host_crc32 = 0; /* the attached crc to the frame end */
+	CRC_Status crc_verf_status = CRC_VERIFICATION_FAILED;
+	uint16_t Host_CMD_Packet_Len = 0;
+
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("Get Help CMD ..... ! \r\n");
+#endif
+
+	Host_CMD_Packet_Len = Host_Buffer[0] + 1;
+	/* CRC verification */
+	host_crc32 = *((uint32_t *)(Host_Buffer + Host_CMD_Packet_Len - CRC_TYPE_SIZE_BYTES));
+	crc_verf_status = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0] , Host_CMD_Packet_Len - 4, host_crc32);
+
+	if(crc_verf_status == CRC_VERIFICATION_PASSED) {
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("CRC Verification Passed \r\n");
+#endif
+	Bootloader_Send_ACK(12);
+	Bootloader_Send_Data_To_Host((uint8_t *)(&Bootloader_Supported_CMDs[0]), 12);
+
+	} else {
+
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("CRC Verification Failed \r\n");
+#endif
+	Bootloader_Send_NACK();
+
+	}
+}
+
+static void Bootloader_Get_Chip_Identification_Number(uint8_t *Host_Buffer)
+{
+	uint32_t host_crc32 = 0; /* the attached crc to the frame end */
+	CRC_Status crc_verf_status = CRC_VERIFICATION_FAILED;
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint16_t MCU_Identification_Number = 0;
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("Get_Chip_Identification_Number..! \r\n");
+#endif
+
+	Host_CMD_Packet_Len = Host_Buffer[0] + 1;
+	/* CRC verification */
+	host_crc32 = *((uint32_t *)(Host_Buffer + Host_CMD_Packet_Len - CRC_TYPE_SIZE_BYTES));
+	crc_verf_status = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0] , Host_CMD_Packet_Len - 4, host_crc32);
+
+	if(crc_verf_status == CRC_VERIFICATION_PASSED) {
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("CRC Verification Passed \r\n");
+#endif
+	/* Get the MCU chip identification number */
+	MCU_Identification_Number = (uint16_t)((DBGMCU->IDCODE) & 0x00000FFF);
+	Bootloader_Send_ACK(2);
+	Bootloader_Send_Data_To_Host((uint8_t *)(&MCU_Identification_Number), 2);
+
+	} else {
+
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("CRC Verification Failed \r\n");
+#endif
+	Bootloader_Send_NACK();
+	}
+}
+
+static uint8_t CBL_STM32F103_Get_RDP_Level(){
+	FLASH_OBProgramInitTypeDef FLASH_OBProgram;
+	/* Get the Option byte configuration */
+	HAL_FLASHEx_OBGetConfig(&FLASH_OBProgram);
+
+	return (uint8_t)(FLASH_OBProgram.RDPLevel);
+}
+
+static void Bootloader_Read_Protection_Level(uint8_t *Host_Buffer){
+	uint16_t Host_CMD_Packet_Len = 0;
+	uint32_t Host_CRC32 = 0;
+	uint8_t RDP_Level = 0;
+
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+	BL_Print_Message("Read the FLASH Read Protection Out level \r\n");
+#endif
+	/* Extract the CRC32 and packet length sent by the HOST */
+	Host_CMD_Packet_Len = Host_Buffer[0] + 1;
+	Host_CRC32 = *((uint32_t *)((Host_Buffer + Host_CMD_Packet_Len) - CRC_TYPE_SIZE_BYTE));
+/* CRC Verification */
+	if(CRC_VERIFICATION_PASSED == Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0] , Host_CMD_Packet_Len - 4, Host_CRC32)){
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_Print_Message("CRC Verification Passed \r\n");
+#endif
+		Bootloader_Send_ACK(1);
+		/* Read Protection Level */
+		RDP_Level = CBL_STM32F103_Get_RDP_Level();
+		/* Report Valid Protection Level */
+		Bootloader_Send_Data_To_Host((uint8_t *)&RDP_Level, 1);
+	}
+	else{
+#if (BL_DEBUG_ENABLE == DEBUG_INFO_ENABLE)
+		BL_Print_Message("CRC Verification Failed \r\n");
+#endif
+		Bootloader_Send_NACK();
+	}
+}
 /* ----------------- Helper Functions Definitions -----------------*/
 static CRC_Status Bootloader_CRC_Verify(uint8_t *pData, uint32_t Data_Len, uint32_t Host_CRC){
 	CRC_Status crc_verf_status = CRC_VERIFICATION_FAILED;
@@ -118,10 +254,10 @@ static CRC_Status Bootloader_CRC_Verify(uint8_t *pData, uint32_t Data_Len, uint3
 	return crc_verf_status;
 }
 
-static void Bootloader_Send_ACK(uint8_t Replay_Len){
+static void Bootloader_Send_ACK(uint8_t Reply_Len){
 	uint8_t Ack_Value[2] = {0};
 	Ack_Value[0] = CBL_SEND_ACK;
-	Ack_Value[1] = Replay_Len;
+	Ack_Value[1] = Reply_Len;
 	HAL_UART_Transmit(BL_HOST_COMMUNICATION_UART, (uint8_t *)Ack_Value, 2, HAL_MAX_DELAY);
 }
 
