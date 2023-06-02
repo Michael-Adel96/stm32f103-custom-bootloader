@@ -21,11 +21,11 @@
 #include "crc.h"
 #include "usart.h"
 #include "gpio.h"
-#include "bootloader_interface.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f1xx_hal_def.h"
+#include "bootloader_interface.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -93,6 +93,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_StatusTypeDef HAL_Status = HAL_ERROR;
   BL_Status Status = BL_NACK;
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,12 +101,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-//	  for (int i = 0; i < 100; ++i) {
-//		  BL_Print_Message("MSG: %d \r\n", i);
-//	  }
-//	  HAL_Status = HAL_UART_Transmit(&huart3, msg, sizeof(msg), HAL_MAX_DELAY);
-//	  HAL_Delay(500);
-//	  HAL_StatusTypeDef HAL_UART_Receive(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout);
+
     /* USER CODE BEGIN 3 */
 	  Status = BL_UART_Fetch_Host_Command();
   }

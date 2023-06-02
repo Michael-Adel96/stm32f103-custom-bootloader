@@ -42,6 +42,22 @@
 
 #define ADDRESS_IS_INVALID           0x00
 #define ADDRESS_IS_VALID             0x01
+
+#define INVALID_SECTOR_NUMBER        0x00
+#define VALID_SECTOR_NUMBER          0x01
+#define UNSUCCESSFUL_ERASE           0x02
+#define SUCCESSFUL_ERASE             0x03
+
+
+/* CBL_MEM_WRITE_CMD */
+#define FLASH_PAYLOAD_WRITE_FAILED   0x00
+#define FLASH_PAYLOAD_WRITE_PASSED   0x01
+
+
+#define FLASH_LAST_PAGE_NUM			63
+
+/* Start address of sector 2 */
+#define FLASH_SECTOR2_BASE_ADDRESS   0x8005800U
 /* Bootloader version */
 /*==============================*/
 #define CBL_VENDOR_ID                100
@@ -66,6 +82,7 @@ typedef enum{
 }CRC_Status;
 
 typedef void (*Jump_Ptr)(void);
+typedef void (*pMainApp)(void);
 /* ----------------- Software Interfaces Declarations -----------------*/
 BL_Status BL_UART_Fetch_Host_Command(void);
 /* ----------------- Helper Interfaces Declarations -----------------*/
