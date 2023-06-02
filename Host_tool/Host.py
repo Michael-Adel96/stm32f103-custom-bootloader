@@ -18,6 +18,7 @@ CBL_MEM_READ_CMD             = 0x18
 CBL_READ_SECTOR_STATUS_CMD   = 0x19
 CBL_OTP_READ_CMD             = 0x20
 CBL_CHANGE_ROP_Level_CMD     = 0x21
+CBL_JUMP_USER_APP            = 0x22
 
 INVALID_SECTOR_NUMBER        = 0x00
 VALID_SECTOR_NUMBER          = 0x01
@@ -118,6 +119,8 @@ def Read_Data_From_Serial_Port(Command_Code):
                 Process_CBL_MEM_WRITE_CMD(Length_To_Follow)
             elif (Command_Code == CBL_CHANGE_ROP_Level_CMD):
                 Process_CBL_CHANGE_ROP_Level_CMD(Length_To_Follow)
+            elif (Command_Code == CBL_JUMP_USER_APP):
+                Process_CBL_JUMP_USER_APP_CMD(Length_To_Follow)
         else:
             print ("\n   Received Not-Acknowledgement from Bootloader")
             sys.exit()
@@ -157,6 +160,15 @@ def Process_CBL_GO_TO_ADDR_CMD(Data_Len):
         print("\n   Address Status is Valid")
     else:
         print("\n   Address Status is InValid")
+
+def Process_CBL_JUMP_USER_APP_CMD(Data_Len):
+    # Serial_Data = Read_Serial_Port(0)
+    # _value_ = bytearray(Serial_Data)
+    print("\n  Jumped successfully to user app")
+    # if(_value_[0] == 1):
+    #     print("\n  Jumped successfully to user app")
+    # else:
+    #     print("\n  The provided address Status is InValid")
 
 def Process_CBL_FLASH_ERASE_CMD(Data_Len):
     BL_Erase_Status = 0
@@ -415,7 +427,7 @@ def Decode_CBL_Command(Command):
             
             ''' Read the response from the bootloader '''
             BL_Return_Value = Read_Data_From_Serial_Port(CBL_MEM_WRITE_CMD)
-            sleep(2)
+            sleep(0.5)
         ''' Memory write is inactive '''
         Memory_Write_Is_Active = 0
         if(Memory_Write_All == 1):
@@ -442,8 +454,21 @@ def Decode_CBL_Command(Command):
             for Data in BL_Host_Buffer[1 : CBL_CHANGE_ROP_Level_CMD_Len]:
                 Write_Data_To_Serial_Port(Data, CBL_CHANGE_ROP_Level_CMD_Len - 1)
             Read_Data_From_Serial_Port(CBL_CHANGE_ROP_Level_CMD)
-        else:
-            print("\n   Protection level (", Protection_level, ") not supported !!")
+    elif (Command == 13):
+        print("Jump bootloader to user APP command")
+        CBL_JUMP_USER_APP_CMD_Len = 6
+        BL_Host_Buffer[0] = CBL_JUMP_USER_APP_CMD_Len - 1
+        BL_Host_Buffer[1] = CBL_JUMP_USER_APP
+        CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_JUMP_USER_APP_CMD_Len - 4) 
+        CRC32_Value = CRC32_Value & 0xFFFFFFFF
+        BL_Host_Buffer[2] = Word_Value_To_Byte_Value(CRC32_Value, 1, 1)
+        BL_Host_Buffer[3] = Word_Value_To_Byte_Value(CRC32_Value, 2, 1)
+        BL_Host_Buffer[4] = Word_Value_To_Byte_Value(CRC32_Value, 3, 1)
+        BL_Host_Buffer[5] = Word_Value_To_Byte_Value(CRC32_Value, 4, 1)
+        Write_Data_To_Serial_Port(BL_Host_Buffer[0], 1)
+        for Data in BL_Host_Buffer[1 : CBL_JUMP_USER_APP_CMD_Len]:
+            Write_Data_To_Serial_Port(Data, CBL_JUMP_USER_APP_CMD_Len - 1)
+        Read_Data_From_Serial_Port(CBL_JUMP_USER_APP)
             
         
 
@@ -456,16 +481,10 @@ while True:
     print("Which command you need to send to the bootLoader :");
     print("   CBL_GET_VER_CMD              --> 1")
     print("   CBL_GET_HELP_CMD             --> 2")
-    print("   CBL_GET_CID_CMD              --> 3")
-    print("   CBL_GET_RDP_STATUS_CMD       --> 4")
     print("   CBL_GO_TO_ADDR_CMD           --> 5")
     print("   CBL_FLASH_ERASE_CMD          --> 6")
     print("   CBL_MEM_WRITE_CMD            --> 7")
-    print("   CBL_ED_W_PROTECT_CMD         --> 8")
-    print("   CBL_MEM_READ_CMD             --> 9")
-    print("   CBL_READ_SECTOR_STATUS_CMD   --> 10")
-    print("   CBL_OTP_READ_CMD             --> 11")
-    print("   CBL_CHANGE_ROP_Level_CMD     --> 12")
+    print("   CBL_JMP_USER_APP_CMD         --> 13")
     
     CBL_Command = input("\nEnter the command code : ")
     
