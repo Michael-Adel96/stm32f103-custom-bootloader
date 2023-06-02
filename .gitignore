@@ -6,8 +6,8 @@
 
 # Ignore all files in a specific folder
 # foldername/
-App_1_project/Debug/
-BL_project/Debug
+App_1 project/Debug/
+BL project/Debug
 
 # Ignore files in a nested folder
 # foldername/nestedfolder/

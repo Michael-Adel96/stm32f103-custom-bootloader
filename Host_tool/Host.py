@@ -331,10 +331,10 @@ def Decode_CBL_Command(Command):
         NumberOfSectors = 0
         BL_Host_Buffer[0] = CBL_FLASH_ERASE_CMD_Len - 1
         BL_Host_Buffer[1] = CBL_FLASH_ERASE_CMD
-        SectorNumber = input("\n   Please enter start sector number(0-11)          : ")
-        SectorNumber = int(SectorNumber, 16)
+        SectorNumber = input("\n   Please enter start page number(0-63) in decimal      : ")
+        SectorNumber = int(SectorNumber)
         if(SectorNumber != 0xFF):
-            NumberOfSectors = int(input("\n   Please enter number of sectors to erase (12 Max): "), 16)
+            NumberOfSectors = int(input("\n   Please enter number of sectors to erase in decimal: "))
         BL_Host_Buffer[2] = SectorNumber
         BL_Host_Buffer[3] = NumberOfSectors
         CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_FLASH_ERASE_CMD_Len - 4) 
