@@ -5,9 +5,9 @@
 2. APP Project<br>
     a. Configure app linker script to the new flash start address.<br>
     b. Configure the IVT offset.<br>
-        >-> Go to system_stm32f1xx.c file.<br>
-        >-> Uncomment this line "#define USER_VECT_TAB_ADDRESS"<br>
-        >-> then modify VECT_TAB_OFFSET to be the start address of the flash in APP project.<br>
+    >-> Go to system_stm32f1xx.c file.<br>
+    >-> Uncomment this line "#define USER_VECT_TAB_ADDRESS"<br>
+    >-> then modify VECT_TAB_OFFSET to be the start address of the flash in APP project.<br>
 
 ## Flash memory organization
 <p align="center">
