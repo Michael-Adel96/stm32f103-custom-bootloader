@@ -18,7 +18,8 @@ CBL_MEM_READ_CMD             = 0x18
 CBL_READ_SECTOR_STATUS_CMD   = 0x19
 CBL_OTP_READ_CMD             = 0x20
 CBL_CHANGE_ROP_Level_CMD     = 0x21
-CBL_JUMP_USER_APP            = 0x22
+CBL_JUMP_USER_APP_1          = 0x22
+CBL_JUMP_USER_APP_2          = 0x23
 
 INVALID_SECTOR_NUMBER        = 0x00
 VALID_SECTOR_NUMBER          = 0x01
@@ -119,7 +120,7 @@ def Read_Data_From_Serial_Port(Command_Code):
                 Process_CBL_MEM_WRITE_CMD(Length_To_Follow)
             elif (Command_Code == CBL_CHANGE_ROP_Level_CMD):
                 Process_CBL_CHANGE_ROP_Level_CMD(Length_To_Follow)
-            elif (Command_Code == CBL_JUMP_USER_APP):
+            elif (Command_Code == CBL_JUMP_USER_APP_1 or Command_Code == CBL_JUMP_USER_APP_2):
                 Process_CBL_JUMP_USER_APP_CMD(Length_To_Follow)
         else:
             print ("\n   Received Not-Acknowledgement from Bootloader")
@@ -456,9 +457,14 @@ def Decode_CBL_Command(Command):
             Read_Data_From_Serial_Port(CBL_CHANGE_ROP_Level_CMD)
     elif (Command == 13):
         print("Jump bootloader to user APP command")
+        App_id = int(input("Enter the app ID [1 or 2]: "))
         CBL_JUMP_USER_APP_CMD_Len = 6
         BL_Host_Buffer[0] = CBL_JUMP_USER_APP_CMD_Len - 1
-        BL_Host_Buffer[1] = CBL_JUMP_USER_APP
+        if App_id == 1:
+            app_id_cmd = CBL_JUMP_USER_APP_1
+        elif App_id == 2:
+            app_id_cmd = CBL_JUMP_USER_APP_2
+        BL_Host_Buffer[1] = app_id_cmd
         CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_JUMP_USER_APP_CMD_Len - 4) 
         CRC32_Value = CRC32_Value & 0xFFFFFFFF
         BL_Host_Buffer[2] = Word_Value_To_Byte_Value(CRC32_Value, 1, 1)
@@ -468,7 +474,8 @@ def Decode_CBL_Command(Command):
         Write_Data_To_Serial_Port(BL_Host_Buffer[0], 1)
         for Data in BL_Host_Buffer[1 : CBL_JUMP_USER_APP_CMD_Len]:
             Write_Data_To_Serial_Port(Data, CBL_JUMP_USER_APP_CMD_Len - 1)
-        Read_Data_From_Serial_Port(CBL_JUMP_USER_APP)
+        Read_Data_From_Serial_Port(app_id_cmd)
+
             
         
 

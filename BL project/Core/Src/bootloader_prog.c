@@ -21,7 +21,7 @@ static void Bootloader_Get_Help(uint8_t *Host_Buffer);
 static void Bootloader_Erase_Flash(uint8_t *Host_Buffer);
 static void Bootloader_Memory_Write(uint8_t *Host_Buffer);
 static void Bootloader_Jump_To_Address(uint8_t *Host_Buffer);
-static void Bootloader_Jump_to_user_app(void);
+static void Bootloader_Jump_to_user_app(APP_ID app_id);
 
 
 /* ----------------- BL Service Functions Declearation ----------------- */
@@ -42,7 +42,8 @@ static uint8_t Bootloader_Supported_CMDs[12] = {
     CBL_GO_TO_ADDR_CMD,
     CBL_FLASH_ERASE_CMD,
     CBL_MEM_WRITE_CMD,
-	CBL_JUMP_USER_APP,
+	CBL_JUMP_USER_APP_1,
+	CBL_JUMP_USER_APP_2,
 };
 
 
@@ -89,8 +90,12 @@ BL_Status BL_UART_Fetch_Host_Command(void)
 					Bootloader_Memory_Write(BL_Host_Buffer);
 					status = BL_OK;
 					break;
-				case CBL_JUMP_USER_APP:
-					Bootloader_Jump_to_user_app();
+				case CBL_JUMP_USER_APP_1:
+					Bootloader_Jump_to_user_app(APP_ID_1);
+					status = BL_OK;
+					break;
+				case CBL_JUMP_USER_APP_2:
+					Bootloader_Jump_to_user_app(APP_ID_2);
 					status = BL_OK;
 					break;
 				default:
@@ -345,14 +350,31 @@ static void Bootloader_Memory_Write(uint8_t *Host_Buffer){
 
 }
 
-static void Bootloader_Jump_to_user_app(void){
+static void Bootloader_Jump_to_user_app(APP_ID app_id){
 	uint8_t BL_Jump_Status = 3;
 	Bootloader_Send_ACK(1);
-	/* Value of the main stack pointer of our main application */
-	uint32_t MSP_Value = *((volatile uint32_t *)FLASH_SECTOR2_BASE_ADDRESS);
+	uint32_t MSP_Value;
+	uint32_t MainAppAddr;
+	if (app_id == APP_ID_1) {
+		/* Value of the main stack pointer of our main application */
+		MSP_Value = *((volatile uint32_t *)FLASH_SECTOR_APP_1_BASE_ADDRESS);
 
-	/* Reset Handler definition function of our main application */
-	uint32_t MainAppAddr = *((volatile uint32_t *)(FLASH_SECTOR2_BASE_ADDRESS + 4));
+		/* Reset Handler definition function of our main application */
+		MainAppAddr = *((volatile uint32_t *)(FLASH_SECTOR_APP_1_BASE_ADDRESS + 4));
+	} else if (app_id == APP_ID_2) {
+		/* Value of the main stack pointer of our main application */
+		MSP_Value = *((volatile uint32_t *)FLASH_SECTOR_APP_2_BASE_ADDRESS);
+
+		/* Reset Handler definition function of our main application */
+		MainAppAddr = *((volatile uint32_t *)(FLASH_SECTOR_APP_2_BASE_ADDRESS + 4));
+	} else {
+
+	}
+	// /* Value of the main stack pointer of our main application */
+	// uint32_t MSP_Value = *((volatile uint32_t *)FLASH_SECTOR_APP_1_BASE_ADDRESS);
+
+	// /* Reset Handler definition function of our main application */
+	// uint32_t MainAppAddr = *((volatile uint32_t *)(FLASH_SECTOR_APP_1_BASE_ADDRESS + 4));
 
 	/* Fetch the reset handler address of the user application */
 	pMainApp ResetHandler_Address = (pMainApp)MainAppAddr;
@@ -398,7 +420,7 @@ static uint8_t Perform_Flash_Erase(uint8_t sector_Number, uint8_t Number_Of_Sect
 		// invalid sector number
 	}
 
-	if((sector_Number + Number_Of_Sectors) <= FLASH_LAST_PAGE_NUM){
+	if((sector_Number + Number_Of_Sectors - 1) <= FLASH_LAST_PAGE_NUM){
 		// valid Number of sectors
 		eraseInit.NbPages = Number_Of_Sectors;
 	}

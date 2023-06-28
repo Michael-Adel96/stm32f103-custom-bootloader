@@ -22,7 +22,8 @@
 #define CBL_GO_TO_ADDR_CMD           0x14
 #define CBL_FLASH_ERASE_CMD          0x15
 #define CBL_MEM_WRITE_CMD            0x16
-#define CBL_JUMP_USER_APP			 0x22
+#define CBL_JUMP_USER_APP_1			 0x22
+#define CBL_JUMP_USER_APP_2			 0x23
 
 /* ACK codes */
 #define CBL_SEND_NACK                0xAB
@@ -57,6 +58,10 @@ typedef enum{
 	CRC_VERIFICATION_PASSED
 }CRC_Status;
 
+typedef enum{
+	APP_ID_1 = 0,
+	APP_ID_2
+}APP_ID;
 typedef void (*Jump_Ptr)(void);
 typedef void (*pMainApp)(void);
 /* ----------------- Software Interfaces Declarations -----------------*/

@@ -11,7 +11,8 @@
 
 /* Flash configurations */
 /* Set the start address of the user app */
-#define FLASH_SECTOR2_BASE_ADDRESS   0x8005800U
+#define FLASH_SECTOR_APP_1_BASE_ADDRESS   0x8005000U
+#define FLASH_SECTOR_APP_2_BASE_ADDRESS   0x800A800U
 #define FLASH_LAST_PAGE_NUM				63
 
 
