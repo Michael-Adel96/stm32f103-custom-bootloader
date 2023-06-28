@@ -1,6 +1,6 @@
 ## Usage steps
 1. BL Project<br>
-    a. Configure app start address in bootloader_config.h file.<br>
+    a. Configure app_1 and app_2 start addresses in bootloader_config.h file.<br>
 
 2. APP Project<br>
     a. Configure app linker script to the new flash start address.<br>
