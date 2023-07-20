@@ -769,10 +769,10 @@ static BL_STATUS Bootloader_Erase_APPs_status(APP_ID app_id, BL_Status mem_erase
 					break;
 				case BL_APP1_APP2:
 					if (app_id == APP_ID_1) {
-						Bootloader_write_BL_state(APP_ID_2);
+						Bootloader_write_BL_state(BL_APP2);
 						bl_func_status = STATUS_OK;
 					} else if (app_id == APP_ID_2) {
-						Bootloader_write_BL_state(APP_ID_1);
+						Bootloader_write_BL_state(BL_APP1);
 						bl_func_status = STATUS_OK;
 					} else {
 						bl_func_status = STATUS_NOK;
