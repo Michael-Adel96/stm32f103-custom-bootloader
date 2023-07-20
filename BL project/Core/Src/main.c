@@ -94,6 +94,7 @@ int main(void)
   HAL_StatusTypeDef HAL_Status = HAL_ERROR;
   BL_Status Status = BL_NACK;
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+  BL_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */

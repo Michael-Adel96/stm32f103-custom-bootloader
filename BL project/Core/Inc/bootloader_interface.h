@@ -24,6 +24,10 @@
 #define CBL_MEM_WRITE_CMD            0x16
 #define CBL_JUMP_USER_APP_1			 0x22
 #define CBL_JUMP_USER_APP_2			 0x23
+#define CBL_MEM_WRITE_APP_1_CMD      0x24
+#define CBL_MEM_WRITE_APP_2_CMD      0x25
+#define CBL_FLASH_ERASE_APP1_CMD     0x26
+#define CBL_FLASH_ERASE_APP2_CMD     0x27
 
 /* ACK codes */
 #define CBL_SEND_NACK                0xAB
@@ -62,9 +66,11 @@ typedef enum{
 	APP_ID_1 = 0,
 	APP_ID_2
 }APP_ID;
+
 typedef void (*Jump_Ptr)(void);
 typedef void (*pMainApp)(void);
 /* ----------------- Software Interfaces Declarations -----------------*/
+void BL_Init(void);
 BL_Status BL_UART_Fetch_Host_Command(void);
 
 /* ----------------- Helper Interfaces Declarations -----------------*/

@@ -20,6 +20,10 @@ CBL_OTP_READ_CMD             = 0x20
 CBL_CHANGE_ROP_Level_CMD     = 0x21
 CBL_JUMP_USER_APP_1          = 0x22
 CBL_JUMP_USER_APP_2          = 0x23
+CBL_MEM_WRITE_APP_1_CMD      = 0x24
+CBL_MEM_WRITE_APP_2_CMD      = 0x25
+CBL_FLASH_ERASE_APP1_CMD     = 0x26
+CBL_FLASH_ERASE_APP2_CMD     = 0x27
 
 INVALID_SECTOR_NUMBER        = 0x00
 VALID_SECTOR_NUMBER          = 0x01
@@ -227,13 +231,13 @@ def Word_Value_To_Byte_Value(Word_Value, Byte_Index, Byte_Lower_First):
     Byte_Value = (Word_Value >> (8 * (Byte_Index - 1)) & 0x000000FF)
     return Byte_Value
 
-def CalulateBinFileLength():
-    BinFileLength = os.path.getsize("Application.bin")
+def CalulateBinFileLength(filePath):
+    BinFileLength = os.path.getsize(filePath)
     return BinFileLength
 
-def OpenBinFile():
+def OpenBinFile(filePath):
     global BinFile
-    BinFile = open('Application.bin', 'rb')
+    BinFile = open(filePath, 'rb')
 
 def Decode_CBL_Command(Command):
     BL_Host_Buffer = []
@@ -348,6 +352,33 @@ def Decode_CBL_Command(Command):
         for Data in BL_Host_Buffer[1 : CBL_FLASH_ERASE_CMD_Len]:
             Write_Data_To_Serial_Port(Data, CBL_FLASH_ERASE_CMD_Len - 1)
         Read_Data_From_Serial_Port(CBL_FLASH_ERASE_CMD)
+    elif (Command == 9):
+        print("APP sector erase command")
+        App_id = int(input("Enter the app ID [1 or 2]: "))
+        CBL_FLASH_ERASE_CMD_Len = 8
+        SectorNumber = 0
+        NumberOfSectors = 22
+        BL_Host_Buffer[0] = CBL_FLASH_ERASE_CMD_Len - 1
+        if App_id == 1:
+            SectorNumber = 20
+            cmd_erase = CBL_FLASH_ERASE_APP1_CMD
+        elif App_id == 2:
+            SectorNumber = 42
+            cmd_erase = CBL_FLASH_ERASE_APP2_CMD
+        BL_Host_Buffer[1] = cmd_erase
+        SectorNumber = int(SectorNumber)
+        BL_Host_Buffer[2] = SectorNumber
+        BL_Host_Buffer[3] = NumberOfSectors
+        CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_FLASH_ERASE_CMD_Len - 4) 
+        CRC32_Value = CRC32_Value & 0xFFFFFFFF
+        BL_Host_Buffer[4] = Word_Value_To_Byte_Value(CRC32_Value, 1, 1)
+        BL_Host_Buffer[5] = Word_Value_To_Byte_Value(CRC32_Value, 2, 1)
+        BL_Host_Buffer[6] = Word_Value_To_Byte_Value(CRC32_Value, 3, 1)
+        BL_Host_Buffer[7] = Word_Value_To_Byte_Value(CRC32_Value, 4, 1)
+        Write_Data_To_Serial_Port(BL_Host_Buffer[0], 1)
+        for Data in BL_Host_Buffer[1 : CBL_FLASH_ERASE_CMD_Len]:
+            Write_Data_To_Serial_Port(Data, CBL_FLASH_ERASE_CMD_Len - 1)
+        Read_Data_From_Serial_Port(CBL_FLASH_ERASE_CMD)
     elif (Command == 7):
         print("Write data into different memories of the MCU command")
         global Memory_Write_Is_Active
@@ -360,10 +391,10 @@ def Decode_CBL_Command(Command):
         Memory_Write_All = 1
         
         ''' Get the total length of the binary file '''
-        File_Total_Len = CalulateBinFileLength()
+        File_Total_Len = CalulateBinFileLength("Application.bin")
         print("   Preparing writing a binary file with length (", File_Total_Len, ") Bytes")
         ''' Open the binary file '''
-        OpenBinFile()
+        OpenBinFile("Application.bin")
         ''' Calculate the remaining payload '''
         BinFileRemainingBytes = File_Total_Len - BinFileSentBytes
         ''' Get the start address to write the payload '''
@@ -433,6 +464,112 @@ def Decode_CBL_Command(Command):
         Memory_Write_Is_Active = 0
         if(Memory_Write_All == 1):
             print("\n\n Payload Written Successfully")
+
+    elif (Command == 8):
+        print("Write user apps 1 or 2")
+        File_Total_Len = 0
+        BinFileRemainingBytes = 0
+        BinFileSentBytes = 0
+        BaseMemoryAddress = 0
+        BinFileReadLength = 0
+        Memory_Write_All = 1
+        App_id = int(input("Enter the app ID [1 or 2]: "))
+        if App_id == 1:
+            filePath = "APP1.bin"
+            BaseMemoryAddress = 0x08005000
+            app_id_cmd = CBL_MEM_WRITE_APP_1_CMD
+        elif App_id == 2:
+            filePath = "APP2.bin"
+            BaseMemoryAddress = 0x0800A800
+            app_id_cmd = CBL_MEM_WRITE_APP_2_CMD
+        else:
+            assert(0)
+        
+        last_packet_flag = False
+        ''' Get the total length of the binary file '''
+        File_Total_Len = CalulateBinFileLength(filePath)
+        print("   Preparing writing a binary file with length (", File_Total_Len, ") Bytes")
+        ''' Open the binary file '''
+        OpenBinFile(filePath)
+        ''' Calculate the remaining payload '''
+        BinFileRemainingBytes = File_Total_Len - BinFileSentBytes
+        ''' Keep sending the write packet till the last payload byte '''
+        while(BinFileRemainingBytes):
+            ''' Memory write is active '''
+            Memory_Write_Is_Active = 1
+            
+            ''' Read 128 bytes from the binary file each time '''
+            if(BinFileRemainingBytes >= 128):
+                BinFileReadLength = 128
+            else:
+                BinFileReadLength = BinFileRemainingBytes
+            
+            for BinFileByte in range(BinFileReadLength):
+                BinFileByteValue = BinFile.read(1)
+                BinFileByteValue = bytearray(BinFileByteValue)
+                BL_Host_Buffer[8 + BinFileByte] = int(BinFileByteValue[0])
+            
+            ''' Update the Host packet with the command code ID '''
+            BL_Host_Buffer[1] = app_id_cmd
+        
+            ''' Update the Host packet with the base address '''
+            BL_Host_Buffer[2] = Word_Value_To_Byte_Value(BaseMemoryAddress, 1, 1)
+            BL_Host_Buffer[3] = Word_Value_To_Byte_Value(BaseMemoryAddress, 2, 1)
+            BL_Host_Buffer[4] = Word_Value_To_Byte_Value(BaseMemoryAddress, 3, 1)
+            BL_Host_Buffer[5] = Word_Value_To_Byte_Value(BaseMemoryAddress, 4, 1)
+            
+            ''' Update the Host packet with the payload length '''
+            BL_Host_Buffer[6] = BinFileReadLength
+            
+            ''' Update the last packet flag'''
+            if last_packet_flag == True:
+                BL_Host_Buffer[7] = 1
+            else:
+                BL_Host_Buffer[7] = 0
+
+            ''' Update the Host packet with the packet length '''
+            CBL_MEM_WRITE_CMD_Len = (BinFileReadLength + 12)
+            BL_Host_Buffer[0] = CBL_MEM_WRITE_CMD_Len - 1
+            
+            ''' Update the Host packet with the calculated CRC32 '''
+            CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_MEM_WRITE_CMD_Len - 4) 
+            CRC32_Value = CRC32_Value & 0xFFFFFFFF
+            BL_Host_Buffer[8 + BinFileReadLength] = Word_Value_To_Byte_Value(CRC32_Value, 1, 1)
+            BL_Host_Buffer[9 + BinFileReadLength] = Word_Value_To_Byte_Value(CRC32_Value, 2, 1)
+            BL_Host_Buffer[10 + BinFileReadLength] = Word_Value_To_Byte_Value(CRC32_Value, 3, 1)
+            BL_Host_Buffer[11 + BinFileReadLength] = Word_Value_To_Byte_Value(CRC32_Value, 4, 1)
+            
+            ''' Calculate the next Base memory address '''
+            BaseMemoryAddress = BaseMemoryAddress + BinFileReadLength
+            
+            ''' Send the packet length to the bootloader '''
+            Write_Data_To_Serial_Port(BL_Host_Buffer[0], 1)
+            
+            ''' Send the complete packet to the bootloader '''
+            for Data in BL_Host_Buffer[1 : CBL_MEM_WRITE_CMD_Len]:
+                Write_Data_To_Serial_Port(Data, CBL_MEM_WRITE_CMD_Len - 1)
+            
+            ''' Update the total number of bytes sent to the bootloader '''
+            BinFileSentBytes = BinFileSentBytes + BinFileReadLength
+            
+            ''' Calculate the remaining payload '''
+            BinFileRemainingBytes = File_Total_Len - BinFileSentBytes
+
+            if (BinFileRemainingBytes - 128) <= 0:
+                last_packet_flag = True
+            else:
+                last_packet_flag = False
+
+            print("\n   Bytes sent to the bootloader :{0}".format(BinFileSentBytes))
+            
+            ''' Read the response from the bootloader '''
+            BL_Return_Value = Read_Data_From_Serial_Port(CBL_MEM_WRITE_CMD)
+            sleep(0.5)
+        ''' Memory write is inactive '''
+        Memory_Write_Is_Active = 0
+        if(Memory_Write_All == 1):
+            print("\n\n Payload Written Successfully")
+
     elif (Command == 12):
         print("Change read protection level of the user flash command")
         Protection_level = input("\n   Please Enter one of these Protection levels : 0,1,2 : ")
@@ -491,6 +628,8 @@ while True:
     print("   CBL_GO_TO_ADDR_CMD           --> 5")
     print("   CBL_FLASH_ERASE_CMD          --> 6")
     print("   CBL_MEM_WRITE_CMD            --> 7")
+    print("   CBL_MEM_WRITE_APP_CMD        --> 8")
+    print("   CBL_FLASH_ERASE_APP_CMD      --> 9")
     print("   CBL_JMP_USER_APP_CMD         --> 13")
     
     CBL_Command = input("\nEnter the command code : ")
