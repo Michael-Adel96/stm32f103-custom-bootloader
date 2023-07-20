@@ -28,7 +28,7 @@
 #define CBL_MEM_WRITE_APP_2_CMD      0x25
 #define CBL_FLASH_ERASE_APP1_CMD     0x26
 #define CBL_FLASH_ERASE_APP2_CMD     0x27
-
+#define CBL_READ_FLASH_ORG_CMD       0x28
 /* ACK codes */
 #define CBL_SEND_NACK                0xAB
 #define CBL_SEND_ACK                 0xCD

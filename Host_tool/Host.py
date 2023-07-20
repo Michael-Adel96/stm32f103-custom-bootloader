@@ -24,6 +24,7 @@ CBL_MEM_WRITE_APP_1_CMD      = 0x24
 CBL_MEM_WRITE_APP_2_CMD      = 0x25
 CBL_FLASH_ERASE_APP1_CMD     = 0x26
 CBL_FLASH_ERASE_APP2_CMD     = 0x27
+CBL_READ_FLASH_ORG_CMD       = 0x28
 
 INVALID_SECTOR_NUMBER        = 0x00
 VALID_SECTOR_NUMBER          = 0x01
@@ -126,6 +127,8 @@ def Read_Data_From_Serial_Port(Command_Code):
                 Process_CBL_CHANGE_ROP_Level_CMD(Length_To_Follow)
             elif (Command_Code == CBL_JUMP_USER_APP_1 or Command_Code == CBL_JUMP_USER_APP_2):
                 Process_CBL_JUMP_USER_APP_CMD(Length_To_Follow)
+            elif (Command_Code == CBL_READ_FLASH_ORG_CMD):
+                 Process_CBL_READ_FLASH_ORG_CMD(Length_To_Follow)
         else:
             print ("\n   Received Not-Acknowledgement from Bootloader")
             sys.exit()
@@ -215,6 +218,93 @@ def Process_CBL_CHANGE_ROP_Level_CMD(Data_Len):
             print("\n   ROP Level Not Changed ")
         else:
             print("\n   ROP Level -> Unknown Error")
+
+def Process_CBL_READ_FLASH_ORG_CMD(Data_Len):
+    Serial_Data = Read_Serial_Port(Data_Len)
+    if(len(Serial_Data)):
+        flash_organization_code = bytearray(Serial_Data)
+        print(Serial_Data)
+        if (flash_organization_code[0] == 0x00):
+            print(
+                """FLASH ORGANIZATION
+====================
+
+                   ----------------------
+                  |                      |
+                  |        BL            |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Empty Bank 1      |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Empty Bank 2      |
+                  |                      |
+                   ----------------------                   
+                    """
+            )
+        elif (flash_organization_code[0] == 0x01):
+            print(
+                """FLASH ORGANIZATION
+====================
+
+                   ----------------------
+                  |                      |
+                  |        BL            |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Application 1     |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Empty Bank 2      |
+                  |                      |
+                   ----------------------                   
+                    """
+            )
+        elif (flash_organization_code[0] == 0x02):
+            print(
+                """FLASH ORGANIZATION
+====================
+
+                   ----------------------
+                  |                      |
+                  |        BL            |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Empty Bank 1      |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Application 2     |
+                  |                      |
+                   ----------------------                   
+                    """
+            )
+        elif (flash_organization_code[0] == 0x03):
+            print(
+                """FLASH ORGANIZATION
+====================
+
+                   ----------------------
+                  |                      |
+                  |        BL            |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Application 1     |
+                  |                      |
+                  |----------------------|
+                  |                      |
+                  |    Application 2     |
+                  |                      |
+                   ----------------------                   
+                    """
+            )
+
 
 def Calculate_CRC32(Buffer, Buffer_Length):
     CRC_Value = 0xFFFFFFFF
@@ -612,6 +702,21 @@ def Decode_CBL_Command(Command):
         for Data in BL_Host_Buffer[1 : CBL_JUMP_USER_APP_CMD_Len]:
             Write_Data_To_Serial_Port(Data, CBL_JUMP_USER_APP_CMD_Len - 1)
         Read_Data_From_Serial_Port(app_id_cmd)
+    elif (Command == 14):
+        print("Read the current Flash organization")
+        CBL_READ_FLASH_ORG_CMD_Len = 6
+        BL_Host_Buffer[0] = CBL_READ_FLASH_ORG_CMD_Len - 1
+        BL_Host_Buffer[1] = CBL_READ_FLASH_ORG_CMD
+        CRC32_Value = Calculate_CRC32(BL_Host_Buffer, CBL_READ_FLASH_ORG_CMD_Len - 4) 
+        CRC32_Value = CRC32_Value & 0xFFFFFFFF
+        BL_Host_Buffer[2] = Word_Value_To_Byte_Value(CRC32_Value, 1, 1)
+        BL_Host_Buffer[3] = Word_Value_To_Byte_Value(CRC32_Value, 2, 1)
+        BL_Host_Buffer[4] = Word_Value_To_Byte_Value(CRC32_Value, 3, 1)
+        BL_Host_Buffer[5] = Word_Value_To_Byte_Value(CRC32_Value, 4, 1)
+        Write_Data_To_Serial_Port(BL_Host_Buffer[0], 1)
+        for Data in BL_Host_Buffer[1 : CBL_READ_FLASH_ORG_CMD_Len]:
+            Write_Data_To_Serial_Port(Data, CBL_READ_FLASH_ORG_CMD_Len - 1)
+        Read_Data_From_Serial_Port(CBL_READ_FLASH_ORG_CMD)
 
             
         
@@ -631,6 +736,7 @@ while True:
     print("   CBL_MEM_WRITE_APP_CMD        --> 8")
     print("   CBL_FLASH_ERASE_APP_CMD      --> 9")
     print("   CBL_JMP_USER_APP_CMD         --> 13")
+    print("   CBL_READ_FLASH_ORG_CMD       --> 14")
     
     CBL_Command = input("\nEnter the command code : ")
     

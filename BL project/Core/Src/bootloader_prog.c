@@ -22,7 +22,7 @@ static BL_Status Bootloader_Erase_Flash(uint8_t *Host_Buffer);
 static MEM_WRITE_STATUS Bootloader_Memory_Write(uint8_t *Host_Buffer);
 static void Bootloader_Jump_To_Address(uint8_t *Host_Buffer);
 static void Bootloader_Jump_to_user_app(APP_ID app_id);
-
+static void Bootloader_Read_Flash_org_status(uint8_t *Host_Buffer);
 
 /* ----------------- BL Service Functions Declearation ----------------- */
 static void Bootloader_Send_ACK(uint8_t Replay_Len);
@@ -134,6 +134,9 @@ BL_Status BL_UART_Fetch_Host_Command(void)
 					HAL_FLASH_OB_Launch();
 					status = BL_OK;
 					break;
+				case CBL_READ_FLASH_ORG_CMD:
+					Bootloader_Read_Flash_org_status(BL_Host_Buffer);
+					break;
 				default:
 					BL_Print_Message("Invalid command code received from host !! \r\n");
 					break;
@@ -153,6 +156,28 @@ void BL_Init(void)
 	if (bl_apps_status == BL_ERR_STATUS) {
 		Bootloader_write_BL_state(BL_only);
 		HAL_FLASH_OB_Launch();
+	}
+
+}
+
+static void Bootloader_Read_Flash_org_status(uint8_t *Host_Buffer)
+{
+	uint32_t host_crc32 = 0; /* the attached crc to the frame end */
+	CRC_Status crc_verf_status = CRC_VERIFICATION_FAILED;
+	uint16_t Host_CMD_Packet_Len = 0;
+	Host_CMD_Packet_Len = Host_Buffer[0] + 1;
+	BL_APPS_STATUS flash_org_Status;
+	/* CRC verification */
+	host_crc32 = *((uint32_t *)(Host_Buffer + Host_CMD_Packet_Len - CRC_TYPE_SIZE_BYTES));
+	crc_verf_status = Bootloader_CRC_Verify((uint8_t *)&Host_Buffer[0] , Host_CMD_Packet_Len - 4, host_crc32);
+
+	if(crc_verf_status == CRC_VERIFICATION_PASSED) {
+		Bootloader_Send_ACK(1);
+		Bootloader_read_BL_state(&flash_org_Status);
+		Bootloader_Send_Data_To_Host(&flash_org_Status, 1);
+
+	} else {
+		Bootloader_Send_NACK();
 	}
 
 }
