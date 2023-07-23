@@ -13,4 +13,4 @@
 </p>
 
 3. Include "cmox_crypto.h" file.
-4. Start call the cypto APIs in your application.
+4. call the cypto APIs in your application.
