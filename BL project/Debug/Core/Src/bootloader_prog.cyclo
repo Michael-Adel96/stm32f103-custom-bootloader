@@ -1,7 +1,0 @@
-bootloader_prog.c:27:11:BL_UART_Fetch_Host_Command	4
-bootloader_prog.c:62:13:Bootloader_Get_Version	2
-bootloader_prog.c:97:19:Bootloader_CRC_Verify	3
-bootloader_prog.c:121:13:Bootloader_Send_ACK	1
-bootloader_prog.c:128:13:Bootloader_Send_NACK	1
-bootloader_prog.c:134:13:Bootloader_Send_Data_To_Host	1
-bootloader_prog.c:138:6:BL_Print_Message	1

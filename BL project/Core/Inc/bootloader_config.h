@@ -8,10 +8,17 @@
 #ifndef INC_BOOTLOADER_CONFIG_H_
 #define INC_BOOTLOADER_CONFIG_H_
 
+
+/* Flash configurations */
+/* Set the start address of the user app */
+#define FLASH_SECTOR_APP_1_BASE_ADDRESS   0x8005000U
+#define FLASH_SECTOR_APP_2_BASE_ADDRESS   0x800A800U
+#define FLASH_LAST_PAGE_NUM				63
+
+
 /* Debug Configurations */
 #define BL_DISABLE_UART_DEBUG_MESSAGE   0x00
 #define BL_ENABLE_UART_DEBUG_MESSAGE    0x01
-
 #define BL_DEBUG_METHOD  BL_ENABLE_UART_DEBUG_MESSAGE
 #define BL_DEBUG_UART                &huart2
 
